@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas Editor - Authentication</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    .auth-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 70vh;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .loading-box, .error-box {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      text-align: center;
+      max-width: 400px;
+    }
+    .spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+    }
+    h2 {
+      color: #e63946;
+      margin-bottom: 1rem;
+    }
+    p {
+      color: #555;
+      margin-bottom: 1.5rem;
+    }
+    .retry-button {
+      background-color: #457b9d;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .retry-button:hover {
+      background-color: #1d3557;
+    }
+    .retry-message {
+      font-size: 0.8rem;
+      color: #777;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Canvas Editor Authentication</h1>
+  
+  <div class="auth-container">
+    <div id="loading-box" class="loading-box">
+      <div class="spinner"></div>
+      <p>Authenticating, please wait...</p>
+      <p id="retry-message" class="retry-message" style="display: none;">Retry attempt <span id="retry-count">0</span>/3</p>
+    </div>
+    
+    <div id="error-box" class="error-box" style="display: none;">
+      <h2>Authentication Error</h2>
+      <p id="error-message">An error occurred during authentication.</p>
+      <button id="return-button" class="retry-button">Return to Open WebUI</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { validateToken } from '/integration/auth-helpers.js';
+    import { getServiceUrls } from '/integration/environment.js';
+    
+    let isLoading = true;
+    let error = null;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    // Function to create an editor token with expiration
+    function createEditorToken(userData) {
+      // Create a token that expires in 1 hour
+      const expiresAt = Date.now() + (60 * 60 * 1000);
+      
+      // In a real app, you would create a JWT here
+      return `EDITOR_TOKEN_FOR_${userData.id}_${Date.now()}_EXP_${expiresAt}`;
+    }
+    
+    async function processAuthentication() {
+      try {
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const locale = urlParams.get('locale') || 'en';
+        const returnPath = urlParams.get('return_path') || '/';
+        let context = {};
+        
+        try {
+          context = urlParams.get('context') ? JSON.parse(urlParams.get('context')) : {};
+        } catch (e) {
+          console.error('Failed to parse context:', e);
+        }
+        
+        if (!token) {
+          showError("No authentication token provided");
+          return;
+        }
+        
+        // Get service URLs from environment
+        const { openWebUIUrl } = getServiceUrls();
+        
+        try {
+          // Validate the token with OpenWebUI with retries
+          const userData = await validateToken(token, 2);
+          
+          // Create our own session
+          localStorage.setItem('editor_token', createEditorToken(userData));
+          localStorage.setItem('editor_user', JSON.stringify(userData));
+          localStorage.setItem('editor_locale', locale);
+          localStorage.setItem('editor_return_path', returnPath);
+          
+          // Store any extra context
+          if (Object.keys(context).length > 0) {
+            localStorage.setItem('editor_context', JSON.stringify(context));
+          }
+          
+          // Redirect to the editor
+          window.location.href = '/editor';
+        } catch (validationError) {
+          console.error('Token validation failed:', validationError);
+          
+          if (retryCount < maxRetries && validationError.name !== 'TypeError') {
+            // Retry for network issues but not for invalid tokens
+            retryCount++;
+            document.getElementById('retry-message').style.display = 'block';
+            document.getElementById('retry-count').textContent = retryCount;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return processAuthentication();
+          }
+          
+          showError(validationError.message || "Authentication failed");
+        }
+      } catch (e) {
+        console.error('Authentication processing error:', e);
+        showError("An unexpected error occurred");
+      }
+    }
+    
+    function showError(message) {
+      document.getElementById('loading-box').style.display = 'none';
+      document.getElementById('error-box').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+      
+      // Set up return button
+      document.getElementById('return-button').addEventListener('click', () => {
+        const { openWebUIUrl } = getServiceUrls();
+        window.location.href = openWebUIUrl;
+      });
+    }
+    
+    // Start authentication process when page loads
+    document.addEventListener('DOMContentLoaded', processAuthentication);
+  </script>
+</body>
+</html>

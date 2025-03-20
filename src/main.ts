@@ -26,8 +26,14 @@ import { Dialog } from './components/dialog/Dialog'
 import { formatPrismToken } from './utils/prism'
 import { Signature } from './components/signature/Signature'
 import { debounce, nextTick, scrollIntoView } from './utils'
+// Import authentication components
+import { initAuth, AuthAPI } from './routes/auth'
+import { initReturnButton } from './components/ReturnButton'
 
 window.onload = function () {
+  // Initialize authentication
+  initAuth()
+  
   const isApple =
     typeof navigator !== 'undefined' && /Mac OS X/.test(navigator.userAgent)
 
@@ -38,12 +44,12 @@ window.onload = function () {
     {
       header: [
         {
-          value: '第一人民医院',
+          value: 'First People\'s Hospital',
           size: 32,
           rowFlex: RowFlex.CENTER
         },
         {
-          value: '\n门诊病历',
+          value: '\nOutpatient Medical Record',
           size: 18,
           rowFlex: RowFlex.CENTER
         },
@@ -60,11 +66,22 @@ window.onload = function () {
         }
       ]
     },
-    options
+    {
+      ...options,
+      defaultType: ElementType.TEXT
+    }
   )
-  console.log('实例: ', instance)
+  console.log('Instance: ', instance)
   // cypress使用
   Reflect.set(window, 'editor', instance)
+  
+  // Initialize Return button if authenticated
+  if (AuthAPI.isAuthenticated()) {
+    initReturnButton()
+  } else {
+    // Always show return button for demo purposes
+    initReturnButton()
+  }
 
   // 菜单弹窗销毁
   window.addEventListener(
@@ -81,14 +98,14 @@ window.onload = function () {
 
   // 2. | 撤销 | 重做 | 格式刷 | 清除格式 |
   const undoDom = document.querySelector<HTMLDivElement>('.menu-item__undo')!
-  undoDom.title = `撤销(${isApple ? '⌘' : 'Ctrl'}+Z)`
+  undoDom.title = `Undo (${isApple ? '⌘' : 'Ctrl'}+Z)`
   undoDom.onclick = function () {
     console.log('undo')
     instance.command.executeUndo()
   }
 
   const redoDom = document.querySelector<HTMLDivElement>('.menu-item__redo')!
-  redoDom.title = `重做(${isApple ? '⌘' : 'Ctrl'}+Y)`
+  redoDom.title = `Redo (${isApple ? '⌘' : 'Ctrl'}+Y)`
   redoDom.onclick = function () {
     console.log('redo')
     instance.command.executeRedo()
@@ -146,7 +163,7 @@ window.onload = function () {
   const sizeSetDom = document.querySelector<HTMLDivElement>('.menu-item__size')!
   const sizeSelectDom = sizeSetDom.querySelector<HTMLDivElement>('.select')!
   const sizeOptionDom = sizeSetDom.querySelector<HTMLDivElement>('.options')!
-  sizeSetDom.title = `设置字号`
+  sizeSetDom.title = `Set font size`
   sizeSetDom.onclick = function () {
     console.log('size')
     sizeOptionDom.classList.toggle('visible')
@@ -159,7 +176,7 @@ window.onload = function () {
   const sizeAddDom = document.querySelector<HTMLDivElement>(
     '.menu-item__size-add'
   )!
-  sizeAddDom.title = `增大字号(${isApple ? '⌘' : 'Ctrl'}+[)`
+  sizeAddDom.title = `Increase font size (${isApple ? '⌘' : 'Ctrl'}+[)`
   sizeAddDom.onclick = function () {
     console.log('size-add')
     instance.command.executeSizeAdd()
@@ -168,14 +185,14 @@ window.onload = function () {
   const sizeMinusDom = document.querySelector<HTMLDivElement>(
     '.menu-item__size-minus'
   )!
-  sizeMinusDom.title = `减小字号(${isApple ? '⌘' : 'Ctrl'}+])`
+  sizeMinusDom.title = `Decrease font size (${isApple ? '⌘' : 'Ctrl'}+])`
   sizeMinusDom.onclick = function () {
     console.log('size-minus')
     instance.command.executeSizeMinus()
   }
 
   const boldDom = document.querySelector<HTMLDivElement>('.menu-item__bold')!
-  boldDom.title = `加粗(${isApple ? '⌘' : 'Ctrl'}+B)`
+  boldDom.title = `Bold (${isApple ? '⌘' : 'Ctrl'}+B)`
   boldDom.onclick = function () {
     console.log('bold')
     instance.command.executeBold()
@@ -183,7 +200,7 @@ window.onload = function () {
 
   const italicDom =
     document.querySelector<HTMLDivElement>('.menu-item__italic')!
-  italicDom.title = `斜体(${isApple ? '⌘' : 'Ctrl'}+I)`
+  italicDom.title = `Italic (${isApple ? '⌘' : 'Ctrl'}+I)`
   italicDom.onclick = function () {
     console.log('italic')
     instance.command.executeItalic()
@@ -192,7 +209,7 @@ window.onload = function () {
   const underlineDom = document.querySelector<HTMLDivElement>(
     '.menu-item__underline'
   )!
-  underlineDom.title = `下划线(${isApple ? '⌘' : 'Ctrl'}+U)`
+  underlineDom.title = `Underline (${isApple ? '⌘' : 'Ctrl'}+U)`
   const underlineOptionDom =
     underlineDom.querySelector<HTMLDivElement>('.options')!
   underlineDom.querySelector<HTMLSpanElement>('.select')!.onclick =
@@ -226,7 +243,7 @@ window.onload = function () {
   const superscriptDom = document.querySelector<HTMLDivElement>(
     '.menu-item__superscript'
   )!
-  superscriptDom.title = `上标(${isApple ? '⌘' : 'Ctrl'}+Shift+,)`
+  superscriptDom.title = `Superscript (${isApple ? '⌘' : 'Ctrl'}+Shift+,)`
   superscriptDom.onclick = function () {
     console.log('superscript')
     instance.command.executeSuperscript()
@@ -235,7 +252,7 @@ window.onload = function () {
   const subscriptDom = document.querySelector<HTMLDivElement>(
     '.menu-item__subscript'
   )!
-  subscriptDom.title = `下标(${isApple ? '⌘' : 'Ctrl'}+Shift+.)`
+  subscriptDom.title = `Subscript (${isApple ? '⌘' : 'Ctrl'}+Shift+.)`
   subscriptDom.onclick = function () {
     console.log('subscript')
     instance.command.executeSubscript()
@@ -284,7 +301,7 @@ window.onload = function () {
   }
 
   const leftDom = document.querySelector<HTMLDivElement>('.menu-item__left')!
-  leftDom.title = `左对齐(${isApple ? '⌘' : 'Ctrl'}+L)`
+  leftDom.title = `Align left (${isApple ? '⌘' : 'Ctrl'}+L)`
   leftDom.onclick = function () {
     console.log('left')
     instance.command.executeRowFlex(RowFlex.LEFT)
@@ -292,14 +309,14 @@ window.onload = function () {
 
   const centerDom =
     document.querySelector<HTMLDivElement>('.menu-item__center')!
-  centerDom.title = `居中对齐(${isApple ? '⌘' : 'Ctrl'}+E)`
+  centerDom.title = `Align center (${isApple ? '⌘' : 'Ctrl'}+E)`
   centerDom.onclick = function () {
     console.log('center')
     instance.command.executeRowFlex(RowFlex.CENTER)
   }
 
   const rightDom = document.querySelector<HTMLDivElement>('.menu-item__right')!
-  rightDom.title = `右对齐(${isApple ? '⌘' : 'Ctrl'}+R)`
+  rightDom.title = `Align right (${isApple ? '⌘' : 'Ctrl'}+R)`
   rightDom.onclick = function () {
     console.log('right')
     instance.command.executeRowFlex(RowFlex.RIGHT)
@@ -308,7 +325,7 @@ window.onload = function () {
   const alignmentDom = document.querySelector<HTMLDivElement>(
     '.menu-item__alignment'
   )!
-  alignmentDom.title = `两端对齐(${isApple ? '⌘' : 'Ctrl'}+J)`
+  alignmentDom.title = `Justify (${isApple ? '⌘' : 'Ctrl'}+J)`
   alignmentDom.onclick = function () {
     console.log('alignment')
     instance.command.executeRowFlex(RowFlex.ALIGNMENT)
@@ -317,7 +334,7 @@ window.onload = function () {
   const justifyDom = document.querySelector<HTMLDivElement>(
     '.menu-item__justify'
   )!
-  justifyDom.title = `分散对齐(${isApple ? '⌘' : 'Ctrl'}+Shift+J)`
+  justifyDom.title = `Distribute (${isApple ? '⌘' : 'Ctrl'}+Shift+J)`
   justifyDom.onclick = function () {
     console.log('justify')
     instance.command.executeRowFlex(RowFlex.JUSTIFY)
@@ -337,7 +354,7 @@ window.onload = function () {
   }
 
   const listDom = document.querySelector<HTMLDivElement>('.menu-item__list')!
-  listDom.title = `列表(${isApple ? '⌘' : 'Ctrl'}+Shift+U)`
+  listDom.title = `List (${isApple ? '⌘' : 'Ctrl'}+Shift+U)`
   const listOptionDom = listDom.querySelector<HTMLDivElement>('.options')!
   listDom.onclick = function () {
     console.log('list')
@@ -389,7 +406,7 @@ window.onload = function () {
   function recoveryTable() {
     // 还原选择样式、标题、选择行列
     removeAllTableCellSelect()
-    setTableTitle('插入')
+    setTableTitle('Insert')
     colIndex = 0
     rowIndex = 0
     // 隐藏panel
@@ -459,22 +476,22 @@ window.onload = function () {
   hyperlinkDom.onclick = function () {
     console.log('hyperlink')
     new Dialog({
-      title: '超链接',
+      title: 'Hyperlink',
       data: [
         {
           type: 'text',
-          label: '文本',
+          label: 'Text',
           name: 'name',
           required: true,
-          placeholder: '请输入文本',
+          placeholder: 'Enter text',
           value: instance.command.getRangeText()
         },
         {
           type: 'text',
-          label: '链接',
+          label: 'Link',
           name: 'url',
           required: true,
-          placeholder: '请输入链接'
+          placeholder: 'Enter link'
         }
       ],
       onConfirm: payload => {
@@ -540,63 +557,63 @@ window.onload = function () {
     watermarkOptionDom.classList.toggle('visible')
     if (menu === 'add') {
       new Dialog({
-        title: '水印',
+        title: 'Watermark',
         data: [
           {
             type: 'text',
-            label: '内容',
+            label: 'Content',
             name: 'data',
             required: true,
-            placeholder: '请输入内容'
+            placeholder: 'Enter content'
           },
           {
             type: 'color',
-            label: '颜色',
+            label: 'Color',
             name: 'color',
             required: true,
             value: '#AEB5C0'
           },
           {
             type: 'number',
-            label: '字体大小',
+            label: 'Font size',
             name: 'size',
             required: true,
             value: '120'
           },
           {
             type: 'number',
-            label: '透明度',
+            label: 'Opacity',
             name: 'opacity',
             required: true,
             value: '0.3'
           },
           {
             type: 'select',
-            label: '重复',
+            label: 'Repeat',
             name: 'repeat',
             value: '0',
             required: false,
             options: [
               {
-                label: '不重复',
+                label: 'No repeat',
                 value: '0'
               },
               {
-                label: '重复',
+                label: 'Repeat',
                 value: '1'
               }
             ]
           },
           {
             type: 'number',
-            label: '水平间隔',
+            label: 'Horizontal gap',
             name: 'horizontalGap',
             required: false,
             value: '10'
           },
           {
             type: 'number',
-            label: '垂直间隔',
+            label: 'Vertical gap',
             name: 'verticalGap',
             required: false,
             value: '10'
@@ -637,12 +654,12 @@ window.onload = function () {
   codeblockDom.onclick = function () {
     console.log('codeblock')
     new Dialog({
-      title: '代码块',
+      title: 'Code block',
       data: [
         {
           type: 'textarea',
           name: 'codeblock',
-          placeholder: '请输入代码',
+          placeholder: 'Enter code',
           width: 500,
           height: 300
         }
@@ -696,20 +713,20 @@ window.onload = function () {
     switch (type) {
       case ControlType.TEXT:
         new Dialog({
-          title: '文本控件',
+          title: 'Text control',
           data: [
             {
               type: 'text',
-              label: '占位符',
+              label: 'Placeholder',
               name: 'placeholder',
               required: true,
-              placeholder: '请输入占位符'
+              placeholder: 'Enter placeholder'
             },
             {
               type: 'text',
-              label: '默认值',
+              label: 'Default value',
               name: 'value',
-              placeholder: '请输入默认值'
+              placeholder: 'Enter default value'
             }
           ],
           onConfirm: payload => {
@@ -738,28 +755,28 @@ window.onload = function () {
         break
       case ControlType.SELECT:
         new Dialog({
-          title: '列举控件',
+          title: 'Select control',
           data: [
             {
               type: 'text',
-              label: '占位符',
+              label: 'Placeholder',
               name: 'placeholder',
               required: true,
-              placeholder: '请输入占位符'
+              placeholder: 'Enter placeholder'
             },
             {
               type: 'text',
-              label: '默认值',
+              label: 'Default value',
               name: 'code',
-              placeholder: '请输入默认值'
+              placeholder: 'Enter default value'
             },
             {
               type: 'textarea',
-              label: '值集',
+              label: 'Value sets',
               name: 'valueSets',
               required: true,
               height: 100,
-              placeholder: `请输入值集JSON，例：\n[{\n"value":"有",\n"code":"98175"\n}]`
+              placeholder: `Enter value sets JSON, e.g.:\n[{\n"value":"Yes",\n"code":"98175"\n}]`
             }
           ],
           onConfirm: payload => {
@@ -905,48 +922,6 @@ window.onload = function () {
               control: {
                 type,
                 dateFormat,
-                value: value
-                  ? [
-                      {
-                        value
-                      }
-                    ]
-                  : null,
-                placeholder
-              }
-            })
-          }
-        })
-        break
-      case ControlType.NUMBER:
-        new Dialog({
-          title: '数值控件',
-          data: [
-            {
-              type: 'text',
-              label: '占位符',
-              name: 'placeholder',
-              required: true,
-              placeholder: '请输入占位符'
-            },
-            {
-              type: 'text',
-              label: '默认值',
-              name: 'value',
-              placeholder: '请输入默认值'
-            }
-          ],
-          onConfirm: payload => {
-            const placeholder = payload.find(
-              p => p.name === 'placeholder'
-            )?.value
-            if (!placeholder) return
-            const value = payload.find(p => p.name === 'value')?.value || ''
-            instance.command.executeInsertControl({
-              type: ElementType.CONTROL,
-              value: '',
-              control: {
-                type,
                 value: value
                   ? [
                       {
@@ -1499,6 +1474,7 @@ window.onload = function () {
       name: '设计模式'
     }
   ]
+  
   const modeElement = document.querySelector<HTMLDivElement>('.editor-mode')!
   modeElement.onclick = function () {
     // 模式选择循环

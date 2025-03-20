@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Direct Authentication Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .container {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .code-block {
+      background-color: #f1f5f9;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    .button-container {
+      margin: 30px 0;
+      text-align: center;
+    }
+    .note {
+      background-color: #fff8e6;
+      border-left: 4px solid #f59e0b;
+      padding: 10px 15px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Direct Authentication Example</h1>
+    <p>This page demonstrates how to use direct authentication between Open WebUI and Canvas Editor</p>
+  </header>
+  
+  <div class="container">
+    <h2>How It Works</h2>
+    <p>This example shows how to directly transfer a user from Open WebUI to Canvas Editor without requiring an HTML authentication page.</p>
+    
+    <div class="note">
+      <strong>Note:</strong> For this example, we're using a mock JWT token. In a real application, you would use a valid JWT token from your authentication system.
+    </div>
+    
+    <h3>1. Include the Editor Button Script</h3>
+    <div class="code-block">
+      &lt;script type="module" src="/integration/editor-button-direct.js"&gt;&lt;/script&gt;
+    </div>
+    
+    <h3>2. Create a Container for the Button</h3>
+    <div class="code-block">
+      &lt;div id="editor-button-container"&gt;&lt;/div&gt;
+    </div>
+    
+    <h3>3. Initialize the Editor Button</h3>
+    <div class="code-block">
+      &lt;script type="module"&gt;
+        import { createEditorButton } from '/integration/editor-button-direct.js';
+        
+        // Create the editor button
+        createEditorButton({
+          container: '#editor-button-container',
+          editorUrl: 'http://localhost:3000',
+          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXIxMjMiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJuYW1lIjoiVGVzdCBVc2VyIiwicm9sZSI6InVzZXIiLCJwZXJtaXNzaW9ucyI6eyJjYW5FZGl0Ijp0cnVlLCJjYW5EZWxldGUiOmZhbHNlfSwiaWF0IjoxNjc5MDAwMDAwLCJleHAiOjE2NzkwMDM2MDB9.8JGvTVmhgB9klZfCBj3R5Nk1_D3z5h5yLu6QQ7UgZXA',
+          locale: 'en',
+          returnPath: '/',
+          context: {
+            theme: 'light',
+            user_id: 'user123'
+          }
+        });
+      &lt;/script&gt;
+    </div>
+    
+    <h2>Live Example</h2>
+    <p>Click the button below to test the direct authentication:</p>
+    
+    <div id="editor-button-container" class="button-container"></div>
+    
+    <script type="module">
+      import { createEditorButton } from '/integration/editor-button-direct.js';
+      
+      // Create the editor button
+      createEditorButton({
+        container: '#editor-button-container',
+        editorUrl: window.location.origin,
+        token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXIxMjMiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20iLCJuYW1lIjoiVGVzdCBVc2VyIiwicm9sZSI6InVzZXIiLCJwZXJtaXNzaW9ucyI6eyJjYW5FZGl0Ijp0cnVlLCJjYW5EZWxldGUiOmZhbHNlfSwiaWF0IjoxNjc5MDAwMDAwLCJleHAiOjE2NzkwMDM2MDB9.8JGvTVmhgB9klZfCBj3R5Nk1_D3z5h5yLu6QQ7UgZXA',
+        locale: 'en',
+        returnPath: '/',
+        context: {
+          theme: 'light',
+          user_id: 'user123'
+        }
+      });
+    </script>
+  </div>
+</body>
+</html>

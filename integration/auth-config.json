@@ -1,0 +1,10 @@
+{
+  "auth_endpoints": {
+    "validate": "/api/v1/auth/validate",
+    "return": "/api/v1/return"
+  },
+  "token_type": "JWT",
+  "token_location": "localStorage",
+  "token_key": "token",
+  "shared_version": "1.0.0"
+}
