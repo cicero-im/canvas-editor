@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  openwebui:
+    image: openwebui:latest
+    container_name: openwebui
+    volumes:
+      - ./integration:/app/integration
+    ports:
+      - "8080:8080"
+    environment:
+      - JWT_SECRET=your_secure_jwt_secret
+      - EDITOR_SERVICE_URL=http://editor:3000
+    networks:
+      - app-network
+
+  editor:
+    image: canvas-editor:latest
+    container_name: editor
+    volumes:
+      - ./integration:/app/integration
+    ports:
+      - "3000:3000"
+    environment:
+      - OPENWEBUI_SERVICE_URL=http://openwebui:8080
+    networks:
+      - app-network
+
+volumes:
+  integration:
+
+networks:
+  app-network:
+    driver: bridge
